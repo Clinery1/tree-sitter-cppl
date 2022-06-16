@@ -1,0 +1,7 @@
+fn main[mut args:Array(String)]:Int {
+    x:=true
+    my_object:={mut(local) x}
+    a_string:="\nwasd\x0A"
+    my_char:='\u{2500}'
+    return ^main 0
+}
