@@ -9,24 +9,242 @@ module.exports=grammar({
     externals:$=>[
         $.raw_string,
     ],
+    conflicts:$=>[
+        [$.var,$.object_field],
+    ],
     rules:{
         source_file:$=>repeat($._statement),
         _statement:$=>choice(
             $.function,
             $.interface_def,
-            seq($.expr,$._statement_end),
+            $.impl_stmt,
+            $.enum_stmt,
+            seq($._expr,$._statement_end),
             seq($.type_def,$._statement_end),
             seq($.var_decl,$._statement_end),
-            seq($.var_assign,$._statement_end),
+            seq($.assign,$._statement_end),
             seq($.return_stmt,$._statement_end),
             seq($.continue_stmt,$._statement_end),
+            seq($.import_stmt,$._statement_end),
+            seq($.function_signature,$._statement_end),
+            seq($.module_stmt,$._statement_end),
             "\n",
         ),
-        expr:$=>choice(
+        impl_stmt:$=>seq(
+            $.impl_keyword,
+            optional($._type_parameters),
+            optional(seq(field("interface",$._type),$.for_keyword)),
+            field("type",$._type),
+            $.block,
+        ),
+        module_stmt:$=>seq(
+            $.module_keyword,
+            field("name",$.word),
+        ),
+        enum_stmt:$=>seq(
+            $.enum_keyword,
+            field("name",$.word),
+            optional($._type_parameters),
+            "{",
+            repeat(seq($._type,",")),
+            $._type,
+            optional(","),
+            "}",
+        ),
+        import_stmt:$=>seq(
+            $.import_keyword,
+            $.import_path,
+        ),
+        import_path:$=>seq(
+            field("path",$.word),
+            repeat(seq("::",field("path",$.word))),
+            optional($.import_block),
+        ),
+        import_block:$=>seq(
+            "::",
+            "{",
+            repeat(seq($.import_path,",")),
+            $.import_path,
+            optional(","),
+            "}",
+        ),
+        _expr:$=>choice(
             $.object_create,
             $.block,
             $.data,
+            $.var,
+            $.field_path,
+            $.method_call,
+            $.function_call,
+            $.anon_function,
+            $.boolean_ops,
+            $.reference,
+            $.comparison,
+            $.operand,
+            $.factor,
+            $.associated_path,
+            $.for_loop,
+            $.forever_loop,
+            $.while_loop,
+            $.match,
+            $.this_keyword,
+            $.is_type,
+            seq("(",$._expr,")"),
         ),
+        is_type:$=>seq(
+            $.is_keyword,
+            $._type,
+        ),
+        reference:$=>prec.left(2,choice(
+            seq("&",$._expr),
+            seq("&",$.mut_keyword,$._expr),
+        )),
+        boolean_ops:$=>prec.left(3,choice(
+            seq($._expr,$.and_keyword,$._expr),
+            seq($._expr,$.or_keyword,$._expr),
+        )),
+        comparison:$=>prec.left(4,choice(
+            seq($._expr,"==",$._expr),
+            seq($._expr,"!=",$._expr),
+            seq($._expr,">=",$._expr),
+            seq($._expr,"<=",$._expr),
+            seq($._expr,">",$._expr),
+            seq($._expr,"<",$._expr),
+        )),
+        operand:$=>prec.left(5,choice(
+            seq($._expr,"+",$._expr),
+            seq($._expr,"-",$._expr),
+        )),
+        factor:$=>prec.left(6,choice(
+            seq($._expr,"*",$._expr),
+            seq($._expr,"/",$._expr),
+            seq($._expr,"%",$._expr),
+        )),
+        while_loop:$=>seq(
+            $.while_keyword,
+            $._expr,
+            $.block,
+        ),
+        for_loop:$=>seq(
+            $.for_keyword,
+            $.word,
+            $.in_keyword,
+            $._expr,
+            $.block,
+        ),
+        forever_loop:$=>seq(
+            $.loop_keyword,
+            $.block,
+        ),
+        match_pattern:$=>choice(
+            $.data,
+            $.match_pattern_structure,
+            seq(
+                ".",
+                field("method_name",$.word),
+                "(",
+                repeat(seq($._expr,",")),
+                $._expr,
+                optional(","),
+                ")",
+            ),
+            seq(
+                ".",
+                field("method_name",$.word),
+                "(",
+                ")",
+            ),
+            field("var",$.word),
+            seq(
+                choice("==","!=",">=","<=",">","<"),
+                $._expr
+            ),
+            seq(
+                $.is_keyword,
+                $._type,
+            ),
+        ),
+        match_pattern_structure:$=>choice(
+            seq(
+                optional(field("type",$.word)),
+                "{",
+                repeat(seq($.match_pattern_structure_item,",")),
+                $.match_pattern_structure_item,
+                optional(seq(",",optional("..."))),
+                "}",
+            ),
+            seq(
+                optional(field("type",$.word)),
+                "{",
+                optional("..."),
+                "}",
+            ),
+        ),
+        match_pattern_structure_item:$=>choice(
+            field("field",$.word),
+            seq(field("field",$.word),":",field("rename",$.word)),
+            seq(field("field",$.word),":",$.match_pattern_structure),
+        ),
+        match:$=>choice(
+            seq($.match_keyword,$._expr,"{","}"),
+            seq(
+                $.match_keyword,
+                $._expr,
+                "{",
+                repeat(seq($.match_pattern,"=>",$._expr,",")),
+                seq($.match_pattern,"=>",$._expr),
+                optional(","),
+                "}",
+            ),
+        ),
+        associated_path:$=>seq(
+            field("path",$.word),
+            repeat(seq("::",field("path",$.word))),
+            seq("::",field("last",$.word)),
+        ),
+        function_call:$=>prec(2,choice(
+            seq(
+                field("name",$.word),
+                "(",
+                optional(seq(
+                    repeat(seq(field("arg",$._expr),",")),
+                    field("arg",$._expr),
+                    optional(","),
+                )),
+                ")",
+            ),
+            seq(
+                field("path",$.associated_path),
+                "(",
+                optional(seq(
+                    repeat(seq(field("arg",$._expr),",")),
+                    field("arg",$._expr),
+                    optional(","),
+                )),
+                ")",
+            ),
+        )),
+        method_call:$=>choice(
+            seq(
+                $.field_path,
+                "(",
+                repeat(seq(field("arg",$._expr),",")),
+                field("arg",$._expr),
+                optional(","),
+                ")",
+            ),
+            seq(
+                $.field_path,
+                "(",
+                ")",
+            ),
+        ),
+        field_path:$=>seq(
+            field("left",$._expr),
+            ".",
+            field("right",$.word),
+        ),
+        var:$=>$.word,
         object_create:$=>seq(
             "{",
             repeat(seq($.object_field,",",)),
@@ -45,7 +263,7 @@ module.exports=grammar({
                 optional($.mutable),
                 field("name",$.word),
                 "=",
-                field("data",$.expr),
+                field("data",$._expr),
             ),
         ),
         data:$=>choice(
@@ -65,7 +283,7 @@ module.exports=grammar({
             seq(
                 $.return_keyword,
                 optional($.label),
-                field("data",$.expr),
+                field("data",$._expr),
             ),
         ),
         continue_stmt:$=>seq(
@@ -76,25 +294,38 @@ module.exports=grammar({
             "^",
             field("name",$.word),
         ),
+        function_signature:$=>seq(
+            optional($.public),
+            $.fn_keyword,
+            field("name",$.word),
+            field("parameter",$._parameters),
+            optional(seq(":",field("ret_type",$._type))),
+        ),
         function:$=>seq(
             optional($.public),
             $.fn_keyword,
             field("name",$.word),
-            field("parameters",$.parameters),
+            field("parameter",$._parameters),
             optional(seq(":",field("ret_type",$._type))),
-            field("block",$.block),
+            field("block",$.function_block),
+        ),
+        anon_function_sig:$=>seq(
+            $.fn_keyword,
+            field("parameter",$._parameters),
+            optional(seq(":",field("ret_type",$._type))),
         ),
         anon_function:$=>seq(
             $.fn_keyword,
-            field("parameters",$.parameters),
+            field("parameter",$._parameters),
             optional(seq(":",field("ret_type",$._type))),
-            field("block",$.block),
+            field("block",$.function_block),
         ),
+        function_block:$=>$._block,
         type_def:$=>seq(
             optional($.public),
             $.type_keyword,
             field("name",$.word),
-            optional(field("type_parameters",$.type_parameters)),
+            optional(field("type_parameter",$._type_parameters)),
             "=",
             $._type,
         ),
@@ -102,8 +333,8 @@ module.exports=grammar({
             optional($.public),
             $.interface_keyword,
             field("name",$.word),
-            optional(field("type_parameters",$.type_parameters)),
-            field("block",$.block),
+            optional(field("type_parameter",$._type_parameters)),
+            field("block",$._block),
         ),
         var_decl:$=>choice(
             seq(    // no type
@@ -111,24 +342,35 @@ module.exports=grammar({
                 optional($.mutable),
                 field("name",$.word),
                 ":=",
-                field("data",$.expr),
+                field("data",$._expr),
             ),
-            seq(    // no type
+            seq(    // typed
                 optional($.public),
+                optional($.static_keyword),
                 optional($.mutable),
                 field("name",$.word),
                 ":",
                 field("ty",$._type),
                 "=",
-                field("data",$.expr),
+                field("data",$._expr),
+            ),
+            seq(    // constant
+                optional($.public),
+                $.const_keyword,
+                field("name",$.word),
+                ":",
+                field("ty",$._type),
+                "=",
+                field("data",$._expr),
             ),
         ),
-        var_assign:$=>seq(
-            field("name",$.word),
+        assign:$=>seq(
+            field("left",$._expr),
             "=",
-            field("data",$.expr),
+            field("right",$._expr),
         ),
-        block:$=>choice(
+        block:$=>$._block,
+        _block:$=>choice(
             seq("{","}"),
             seq(
                 "{",
@@ -136,7 +378,7 @@ module.exports=grammar({
                 "}",
             ),
         ),
-        parameters:$=>choice(
+        _parameters:$=>choice(
             seq("[","]"),
             seq(
                 "[",
@@ -168,7 +410,7 @@ module.exports=grammar({
             ":",
             field("ty",$._type),
         ),
-        type_parameters:$=>seq(
+        _type_parameters:$=>seq(
             "[",
             repeat(seq($.type_parameter,",")),
             $.type_parameter,
@@ -177,8 +419,7 @@ module.exports=grammar({
         ),
         type_parameter:$=>seq(
             field("name",$.word),
-            ":",
-            field("ty",$._type),
+            optional(seq(":",field("ty",$._type))),
         ),
         _type:$=>choice(
             $.composite_type,
@@ -189,24 +430,20 @@ module.exports=grammar({
             $.anon_function_sig,
             seq("(",$._type,")"),
         ),
-        composite_type:$=>prec.left(2,seq($._type,"+",$._type)),
-        union_type:$=>prec.left(3,seq($._type,"|",$._type)),
-        anon_function_sig:$=>seq(
-            $.fn_keyword,
-            field("parameters",$.parameters),
-            optional(seq(":",field("ret_type",$._type))),
-        ),
-        _type_enclosed:$=>choice(
-            $.composite_type_enclosed,
-            $.union_type_enclosed,
-            $.named_type,
-            $.object_type,
-            $.builtin_type,
-            $.anon_function_sig,
-            seq("(",$._type_enclosed,")"),
-        ),
-        composite_type_enclosed:$=>prec.left(2,seq($._type,"+",$._type)),
-        union_type_enclosed:$=>prec.left(3,seq($._type,"|",$._type)),
+        composite_type:$=>prec(-1,seq(
+            $._type,
+            repeat1(seq(
+                "+",
+                $._type,
+            )),
+        )),
+        union_type:$=>prec(-1,seq(
+            $._type,
+            repeat1(seq(
+                "|",
+                $._type,
+            )),
+        )),
         named_type:$=>choice(
             field("name",$.word),
             seq(field("name",$.word),"(",field("generics",repeat(seq($._type,","))),$._type,")"),
@@ -278,6 +515,12 @@ module.exports=grammar({
         this_keyword:_=>"this",
         true_keyword:_=>"true",
         false_keyword:_=>"false",
+        const_keyword:_=>"const",
+        static_keyword:_=>"static",
+        and_keyword:_=>"and",
+        or_keyword:_=>"or",
+        in_keyword:_=>"in",
+        is_keyword:_=>"is",
 
         // ## Words, numbers, strings, chars
         word:_=>/[a-zA-Z_][a-zA-Z0-9_]*/,

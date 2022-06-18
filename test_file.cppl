@@ -1,7 +1,47 @@
-fn main[mut args:Array(String)]:Int {
-    x:=true
-    my_object:={mut(local) x}
+import std::io::{
+    println,
+    Read,
+    Write,
+}
+
+
+fn main[mut args:Array(String)] {
+    print(args)
+    x:Int=56
+    count_chars:fn[s:String]:Int=fn[s:String]:Int {
+        s.chars().count()
+        args
+    }
+    static mut MY_OBJECT:{pub mut x:Int}={pub mut x}
     a_string:="\nwasd\x0A"
     my_char:='\u{2500}'
+    z:=5 and 4 and 3
+    /// DocComment
+    y:=&mut 5.5
+    MY_OBJECT.x=5
+    std::env::args().iter()
     return ^main 0
+}
+/// Doc Comments are ignored now
+fn main[args:Array(String)]:Int {
+    args.into_iter().for_each(fn[arg:String] {
+        println(arg)
+    });
+    x:="Hello, World!"
+    static X:Int=5
+    match x {
+        .starts_with("Hello")=>{
+            println("x starts with Hello!")
+        },
+        "Clinery"=>{
+            println("My username!")
+        },
+        x=>{
+            print("Unknown value of x: ")
+            println(x)
+        },
+        is String=>{
+            // this wont run due to the above pattern matching everything
+        },
+    }
 }
