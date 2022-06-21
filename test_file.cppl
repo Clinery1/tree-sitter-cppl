@@ -5,7 +5,7 @@ import std::io::{
 }
 
 
-fn main[mut args:Array(String)] {
+fn main[mut args:Array(String)]:Never {
     print(args)
     x:Int=56
     count_chars:fn[s:String]:Int=fn[s:String]:Int {
@@ -18,12 +18,12 @@ fn main[mut args:Array(String)] {
     z:=5 and 4 and 3
     /// DocComment
     y:=&mut 5.5
-    MY_OBJECT.x=5
+    MY_OBJECT.x<-5
     std::env::args().iter()
     return ^main 0
 }
 /// Doc Comments are ignored now
-fn main[args:Array(String)]:Int {
+fn main2[args:Array(String)]:Int {
     args.into_iter().for_each(fn[arg:String] {
         println(arg)
     });
@@ -35,6 +35,8 @@ fn main[args:Array(String)]:Int {
         },
         "Clinery"=>{
             println("My username!")
+        },
+        =5=>{
         },
         x=>{
             print("Unknown value of x: ")

@@ -4020,15 +4020,15 @@
     "named": false
   },
   {
+    "type": "<-",
+    "named": false
+  },
+  {
     "type": "<=",
     "named": false
   },
   {
     "type": "=",
-    "named": false
-  },
-  {
-    "type": "==",
     "named": false
   },
   {
@@ -4065,6 +4065,10 @@
   },
   {
     "type": "Int",
+    "named": false
+  },
+  {
+    "type": "Never",
     "named": false
   },
   {

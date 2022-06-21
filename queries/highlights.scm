@@ -77,7 +77,7 @@
 (match_pattern
   method_name:(word) @function.method)
 (match_pattern
-  var:(word) @var)
+  var:(word) @variable)
 (match_pattern_structure
   type:(word) @type)
 (match_pattern_structure_item
@@ -113,7 +113,7 @@
 
 "&" @punctuation.operator
 "|" @punctuation.operator
-"==" @punctuation.operator
+"=" @punctuation.operator
 "!=" @punctuation.operator
 ">=" @punctuation.operator
 "<=" @punctuation.operator
@@ -127,10 +127,16 @@
 
 "::" @punctuation.delimiter
 "." @punctuation.delimiter
-";" @punctuation.delimiter
-":" @punctuation.delimiter
-"=" @punctuation.delimiter
-":=" @punctuation.delimiter
+"," @punctuation.delimiter
+
+";" @punctuation
+":" @punctuation
+
+"<-" @punctuation.special
+":=" @punctuation.special
+(var_decl ":" @punctuation.special) ; these two are for the `NAME:TYPE=VALUE` syntax
+(var_decl "=" @punctuation.special)
+
 "..." @property
 
 ; comments

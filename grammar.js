@@ -104,7 +104,7 @@ module.exports=grammar({
             seq($._expr,$.or_keyword,$._expr),
         )),
         comparison:$=>prec.left(4,choice(
-            seq($._expr,"==",$._expr),
+            seq($._expr,"=",$._expr),
             seq($._expr,"!=",$._expr),
             seq($._expr,">=",$._expr),
             seq($._expr,"<=",$._expr),
@@ -156,7 +156,7 @@ module.exports=grammar({
             ),
             field("var",$.word),
             seq(
-                choice("==","!=",">=","<=",">","<"),
+                choice("=","!=",">=","<=",">","<"),
                 $._expr
             ),
             seq(
@@ -366,7 +366,7 @@ module.exports=grammar({
         ),
         assign:$=>seq(
             field("left",$._expr),
-            "=",
+            "<-",
             field("right",$._expr),
         ),
         block:$=>$._block,
@@ -473,6 +473,7 @@ module.exports=grammar({
             "Char",
             "Bool",
             "String",
+            "Never",
         )),
         object_type_field:$=>seq(
             optional($.public),
@@ -561,8 +562,9 @@ module.exports=grammar({
         ),
 
         // ## Doc comments
-        doc_comment:$=>prec(10,choice(
-            seq(/\/\/\//,field("body",$.line_comment_body)),
+        doc_comment:$=>prec(10,seq(
+            /\/\/\//,
+            field("body",$.line_comment_body),
         )),
         line_comment_body:_=>/[^\n]*/,
 
